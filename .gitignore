@@ -31,3 +31,4 @@ go.work.sum
 # .idea/
 # .vscode/
 sitedb/sitedb
+sitesecret/sitesecret
