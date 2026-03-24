@@ -33,6 +33,28 @@ var setAdminCmd = &cobra.Command{
 	},
 }
 
+// Define the "remove" action command
+var removeAdminCmd = &cobra.Command{
+	Use:   "remove",
+	Short: "Remove a MongoDB admin",
+	Run: func(cmd *cobra.Command, args []string) {
+		name, _ := cmd.Flags().GetString("name")
+
+		if name == "" {
+			log.Fatalf("Name is required")
+		}
+
+		fmt.Printf("Action: Remove MongoDB admin '%s'...\n", name)
+		client := GetDbClient(cmd)
+		defer client.Disconnect(context.Background())
+
+		err := DeleteDbUser(client, name)
+		if err != nil {
+			log.Fatalf("Failed to remove admin: %v", err)
+		}
+	},
+}
+
 // Define the "list" action command
 var listAdminCmd = &cobra.Command{
 	Use:   "list",
@@ -55,6 +77,7 @@ func init() {
 	// Add the action to the context
 	adminCmd.AddCommand(setAdminCmd)
 	adminCmd.AddCommand(listAdminCmd)
+	adminCmd.AddCommand(removeAdminCmd)
 
 	// Add the context to the root dbenv command
 	rootCmd.AddCommand(adminCmd)
@@ -62,8 +85,9 @@ func init() {
 	// Set Client Flags
 	SetClientFlags(adminCmd)
 
-	// Define flags specifically for the 'set' action
-	setAdminCmd.Flags().StringP("name", "n", "siteadmin", "Name for the new admin.")
-	setAdminCmd.Flags().StringP("password", "p", "", "New admin's password")
+	// Define persistent flags
+	adminCmd.PersistentFlags().StringP("name", "n", "siteadmin", "Database admin username")
 
+	// Define flags specifically for the 'set' action
+	setAdminCmd.Flags().StringP("password", "p", "", "New admin's password")
 }

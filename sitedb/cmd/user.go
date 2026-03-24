@@ -62,6 +62,28 @@ var setUserCmd = &cobra.Command{
 	},
 }
 
+// Define the "remove" action command
+var removeUserCmd = &cobra.Command{
+	Use:   "remove",
+	Short: "Remove a MongoDB user",
+	Run: func(cmd *cobra.Command, args []string) {
+		name, _ := cmd.Flags().GetString("name")
+
+		if name == "" {
+			log.Fatalf("Name is required")
+		}
+
+		fmt.Printf("Action: Remove MongoDB user '%s'...\n", name)
+		client := GetDbClient(cmd)
+		defer client.Disconnect(context.Background())
+
+		err := DeleteDbUser(client, name)
+		if err != nil {
+			log.Fatalf("Failed to remove user: %v", err)
+		}
+	},
+}
+
 // Define the "list" action command
 var listUserCmd = &cobra.Command{
 	Use:   "list",
@@ -192,6 +214,22 @@ func UpsertDbUser(client *mongo.Client, username string, newPassword string, rea
 	return nil
 }
 
+func DeleteDbUser(client *mongo.Client, username string) error {
+	dropUserCmd := bson.D{
+		{Key: "dropUser", Value: username},
+	}
+
+	var result bson.M
+	err := client.Database("admin").RunCommand(context.Background(), dropUserCmd).Decode(&result)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Successfully removed user: %s\n", username)
+
+	return nil
+}
+
 var readDb []string
 var readWriteDb []string
 
@@ -199,6 +237,7 @@ func init() {
 	// Add the action to the context
 	userCmd.AddCommand(setUserCmd)
 	userCmd.AddCommand(listUserCmd)
+	userCmd.AddCommand(removeUserCmd)
 
 	// Add the context to the root dbenv command
 	rootCmd.AddCommand(userCmd)
@@ -206,8 +245,10 @@ func init() {
 	// Set Client Flags
 	SetClientFlags(userCmd)
 
+	// Define persistent flags
+	userCmd.PersistentFlags().StringP("name", "n", "", "Database username")
+
 	// Define flags specifically for the 'create' action
-	setUserCmd.Flags().StringP("name", "n", "", "Username for the new user")
 	setUserCmd.Flags().StringP("password", "p", "", "Password for the new user")
 	setUserCmd.Flags().StringSliceVarP(&readDb, "read", "r", []string{}, "List of read database (comma-separated or multiple flags)")
 	setUserCmd.Flags().StringSliceVarP(&readWriteDb, "write", "w", []string{}, "List of readWrite database (comma-separated or multiple flags)")
