@@ -42,6 +42,8 @@ var rotateCmd = &cobra.Command{
 			payload = GenerateRandomString(32)
 			CreateSecret(ctx, client, GetProjectParents(cmd), secretName)
 			AddSecretVersion(ctx, client, GetProjectParents(cmd), secretName, payload)
+		} else {
+			fmt.Println("Secret is fresh. No rotation needed.")
 		}
 	},
 }
@@ -50,6 +52,6 @@ func init() {
 	rootCmd.AddCommand(rotateCmd)
 
 	rotateCmd.Flags().StringP("name", "n", "", "Secret name")
-	rotateCmd.Flags().IntP("ttl", "h", 24, "Secret time to live in hours.  If the secret is older than this value, it will be rotated.")
+	rotateCmd.Flags().IntP("ttl", "", 24, "Secret time to live in hours.  If the secret is older than this value, it will be rotated.")
 
 }

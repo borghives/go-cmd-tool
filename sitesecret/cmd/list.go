@@ -59,12 +59,12 @@ var listCmd = &cobra.Command{
 
 func IsSecretStale(ctx context.Context, client *secretmanager.Client, parent string, secretName string, ttlHours int) bool {
 	name := fmt.Sprintf("%s/secrets/%s/versions/latest", parent, secretName)
-	req := &secretmanagerpb.GetSecretRequest{
+	req := &secretmanagerpb.GetSecretVersionRequest{
 		Name: name,
 	}
-	secret, err := client.GetSecret(ctx, req)
+	secret, err := client.GetSecretVersion(ctx, req)
 	if err != nil {
-		fmt.Printf("Failed to get secret: %v\n", err)
+		fmt.Printf("Failed to get secret: %s %v\n", err)
 		return true
 	}
 	return secret.CreateTime.AsTime().Before(time.Now().Add(-time.Hour * time.Duration(ttlHours)))
