@@ -14,8 +14,11 @@ import (
 func GetDbClient(cmd *cobra.Command) *mongo.Client {
 	uriFmt, _ := cmd.Flags().GetString("uri")
 	if uriFmt == "" {
-		fmt.Printf("Using default MongoDB URI: mongodb://127.0.0.1:27017/\n")
-		uriFmt = "mongodb://127.0.0.1:27017/"
+		uriFmt = os.Getenv("MONGODB_URI")
+		if uriFmt == "" {
+			fmt.Printf("Using default MongoDB URI: mongodb://127.0.0.1:27017/\n")
+			uriFmt = "mongodb://127.0.0.1:27017/"
+		}
 	}
 	uri := os.ExpandEnv(uriFmt)
 	client, err := mongo.Connect(options.Client().ApplyURI(uri))
