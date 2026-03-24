@@ -165,6 +165,12 @@ func translateRole(readDb []string, readWriteDb []string, isAdmin bool) bson.A {
 }
 
 func CreateDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, isAdmin bool) error {
+	newPassword = ParseHolderString(newPassword)
+
+	if newPassword == "" {
+		return fmt.Errorf("Cannot set empty password\n")
+	}
+
 	createUserCmd := bson.D{
 		{Key: "createUser", Value: username},
 		{Key: "pwd", Value: newPassword},
@@ -188,6 +194,12 @@ func CreateDbUser(client *mongo.Client, username string, newPassword string, rea
 
 func UpdateDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, isAdmin bool) error {
 	roles := translateRole(readDb, readWriteDb, isAdmin)
+	newPassword = ParseHolderString(newPassword)
+
+	if newPassword == "" {
+		return fmt.Errorf("Cannot set empty password\n")
+	}
+
 	fmt.Printf("Roles: %v\n", roles)
 	updateUserCmd := bson.D{
 		{Key: "updateUser", Value: username},

@@ -16,11 +16,16 @@ var rootCmd = &cobra.Command{
 }
 
 func GetProjectParents(cmd *cobra.Command) string {
-	projectID, _ := cmd.Flags().GetString("project")
+	projectID := ""
+	if cmd != nil {
+		projectID, _ = cmd.Flags().GetString("project")
+	}
+
 	if projectID == "" {
 		projectID = os.Getenv("PROJECT_ID")
 		if projectID == "" {
-			log.Fatalf("Project flag and environment PROJECT_ID is not set")
+			fmt.Println("Project flag and environment PROJECT_ID is not set")
+			return ""
 		}
 	}
 	return fmt.Sprintf("projects/%s", projectID)

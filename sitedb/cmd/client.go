@@ -21,6 +21,11 @@ func GetDbClient(cmd *cobra.Command) *mongo.Client {
 		}
 	}
 	uri := os.ExpandEnv(uriFmt)
+
+	//translate uri
+	var err error
+	uri, err = TranslateMongoURIPassword(uri)
+
 	client, err := mongo.Connect(options.Client().ApplyURI(uri))
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
