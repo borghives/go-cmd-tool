@@ -64,7 +64,7 @@ func IsSecretStale(ctx context.Context, client *secretmanager.Client, parent str
 	}
 	secret, err := client.GetSecretVersion(ctx, req)
 	if err != nil {
-		fmt.Printf("Failed to get secret: %s %v\n", err)
+		fmt.Printf("Failed to get secret: %v\n", err)
 		return true
 	}
 	return secret.CreateTime.AsTime().Before(time.Now().Add(-time.Hour * time.Duration(ttlHours)))
