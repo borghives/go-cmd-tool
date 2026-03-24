@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strings"
 	"text/tabwriter"
 
@@ -75,7 +76,7 @@ var listUserCmd = &cobra.Command{
 			log.Fatalf("Failed to list users: %v", err)
 		}
 
-		printUserInfo(users)
+		printUserInfo(users, false)
 	},
 }
 
@@ -93,7 +94,7 @@ func QueryDbUser(client *mongo.Client) (*UsersInfoResponse, error) {
 	return &result, nil
 }
 
-func printUserInfo(res *UsersInfoResponse) {
+func printUserInfo(res *UsersInfoResponse, filterAdmin bool) {
 	if res == nil {
 		log.Fatalf("Empty User Info")
 	}
@@ -109,6 +110,12 @@ func printUserInfo(res *UsersInfoResponse) {
 		var roles []string
 		for _, r := range u.Roles {
 			roles = append(roles, fmt.Sprintf("%s (%s)", r.Role, r.DB))
+		}
+
+		if filterAdmin {
+			if !slices.Contains(roles, "userAdminAnyDatabase (admin)") {
+				continue
+			}
 		}
 
 		roleList := strings.Join(roles, ", ")

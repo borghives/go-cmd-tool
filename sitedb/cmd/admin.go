@@ -33,9 +33,28 @@ var setAdminCmd = &cobra.Command{
 	},
 }
 
+// Define the "list" action command
+var listAdminCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List MongoDB admin",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("Action: Listing MongoDB admin...\n")
+		client := GetDbClient(cmd)
+		defer client.Disconnect(context.Background())
+
+		users, err := QueryDbUser(client)
+		if err != nil {
+			log.Fatalf("Failed to list users: %v", err)
+		}
+
+		printUserInfo(users, true)
+	},
+}
+
 func init() {
 	// Add the action to the context
 	adminCmd.AddCommand(setAdminCmd)
+	adminCmd.AddCommand(listAdminCmd)
 
 	// Add the context to the root dbenv command
 	rootCmd.AddCommand(adminCmd)
