@@ -123,8 +123,12 @@ func printUserInfo(res *UsersInfoResponse, filterAdmin bool) {
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 
-	// Print Header
-	fmt.Fprintln(w, "USER\tROLES")
+	if filterAdmin {
+		fmt.Fprintf(w, "ADMIN\tROLES\n")
+	} else {
+		fmt.Fprintf(w, "USER\tROLES\n")
+	}
+
 	fmt.Fprintln(w, "--------\t---------")
 
 	for _, u := range res.Users {
