@@ -9,8 +9,9 @@ import (
 )
 
 type SiteConfig struct {
-	ProjectID  string `mapstructure:"PROJECT_ID"`
-	MongoDBUri string `mapstructure:"MONGODB_URI"`
+	ProjectID      string `mapstructure:"PROJECT_ID"`
+	MongoDBUri     string `mapstructure:"MONGODB_URI"`
+	MongoDBAuthUri string `mapstructure:"MONGODB_AUTH_URI"`
 }
 
 func (c SiteConfig) OverrideFromCmd(cmd *cobra.Command) *SiteConfig {

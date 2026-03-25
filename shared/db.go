@@ -30,7 +30,10 @@ func MustGetDbClient(cfg *SiteConfig) *mongo.Client {
 	uri := ""
 
 	if cfg != nil {
-		uri = cfg.MongoDBUri
+		uri = cfg.MongoDBAuthUri
+		if uri == "" {
+			uri = cfg.MongoDBUri
+		}
 	}
 
 	if uri == "" {
