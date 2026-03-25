@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/borghives/go-cmd-tool/shared"
 	"github.com/spf13/cobra"
 )
+
+var config shared.SiteConfig
 
 var rootCmd = &cobra.Command{
 	Use:   "sitedb",
@@ -16,4 +20,15 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+}
+
+func init() {
+	cobra.OnInitialize(func() {
+		var err error
+		config, err = shared.LoadSiteConfig()
+		if err != nil {
+			fmt.Printf("Failed to load site config: %v\n", err)
+			os.Exit(1)
+		}
+	})
 }

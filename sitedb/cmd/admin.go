@@ -24,7 +24,7 @@ var setAdminCmd = &cobra.Command{
 		name, _ := cmd.Flags().GetString("name")
 
 		fmt.Printf("Action: Creating MongoDB admin user '%s'...\n", name)
-		client := shared.GetDbClient(cmd)
+		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
 		defer client.Disconnect(context.Background())
 
 		err := shared.UpsertDbUser(client, name, password, nil, nil, true)
@@ -40,7 +40,7 @@ var listAdminCmd = &cobra.Command{
 	Short: "List MongoDB admin",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing MongoDB admin...\n")
-		client := shared.GetDbClient(cmd)
+		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
 		defer client.Disconnect(context.Background())
 
 		users, err := shared.QueryDbUser(client)

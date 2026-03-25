@@ -37,7 +37,7 @@ var setUserCmd = &cobra.Command{
 		fmt.Printf("Action: Set MongoDB user '%s'...\n", name)
 		fmt.Printf("Read permission: %v\n", readDb)
 		fmt.Printf("ReadWrite permission: %v\n", readWriteDb)
-		client := shared.GetDbClient(cmd)
+		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
 		defer client.Disconnect(context.Background())
 
 		err := shared.UpsertDbUser(client, name, password, readDb, readWriteDb, false)
@@ -59,7 +59,7 @@ var removeUserCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Action: Remove MongoDB user '%s'...\n", name)
-		client := shared.GetDbClient(cmd)
+		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
 		defer client.Disconnect(context.Background())
 
 		err := shared.DeleteDbUser(client, name)
@@ -75,7 +75,7 @@ var listUserCmd = &cobra.Command{
 	Short: "List MongoDB users",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing MongoDB users...\n")
-		client := shared.GetDbClient(cmd)
+		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
 		defer client.Disconnect(context.Background())
 
 		users, err := shared.QueryDbUser(client)

@@ -117,25 +117,28 @@ func TranslateMongoURIPassword(uri string) (string, error) {
 	hostAndPath := remainder[endOfCreds:] // Includes the '@'
 
 	// 3. Split User and Password
-	userPass := strings.SplitN(creds, ":", 2)
-	if len(userPass) < 2 {
+	userAuth := strings.SplitN(creds, ":", 2)
+	if len(userAuth) < 2 {
 		return uri, nil // Only user, no password
 	}
 
-	user, pass := userPass[0], userPass[1]
+	user, pass := userAuth[0], userAuth[1]
 
 	// 4. Translate and Stitch
-	newPass := ParseHolderString(pass)
+	newPass, err := ParseSecretHolderString(pass)
+	if err != nil {
+		return "", err
+	}
 	return fmt.Sprintf("%s://%s:%s%s", scheme, user, newPass, hostAndPath), nil
 }
 
-func ParseHolderString(s string) string {
+func ParseSecretHolderString(s string) (string, error) {
 	//parse string "[secret:name:version]"
 	//return the secret
 
 	//check if the string is a holder string
 	if !strings.HasPrefix(s, "[") || !strings.HasSuffix(s, "]") {
-		return s
+		return s, nil
 	}
 
 	//remove the brackets
@@ -146,24 +149,23 @@ func ParseHolderString(s string) string {
 
 	//check if the string is a holder string
 	if len(parts) != 3 {
-		return s
+		return "", fmt.Errorf("Invalid secret holder string format expect [secret:[name]:[version]]")
 	}
 
 	if parts[0] != "secret" {
-		return s
+		return "", fmt.Errorf("Invalid secret holder string format expect [secret:[name]:[version]]")
 	}
 
 	//return the secret
 	return ExtractSecret(parts[1], parts[2])
 }
 
-func ExtractSecret(name string, version string) string {
+func ExtractSecret(name string, version string) (string, error) {
 	//get the secret from the secret manager
 
 	projectParents := GetProjectParents(nil)
 	if projectParents == "" {
-		fmt.Println("Failed to find project_id to extract secret from")
-		return ""
+		return "", fmt.Errorf("Failed to find project_id to extract secret from")
 	}
 
 	// 1. Build the request to get secrets
@@ -181,9 +183,8 @@ func ExtractSecret(name string, version string) string {
 
 	resp, err := client.AccessSecretVersion(ctx, req)
 	if err != nil {
-		fmt.Printf("failed to extract secret: %v", err)
-		return ""
+		return "", fmt.Errorf("failed to extract secret: %v", err)
 	}
 
-	return string(resp.Payload.Data)
+	return string(resp.Payload.Data), nil
 }
