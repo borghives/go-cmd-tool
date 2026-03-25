@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	"github.com/borghives/go-cmd-tool/shared"
 	"github.com/spf13/cobra"
 	"google.golang.org/api/iterator"
 )
@@ -22,7 +22,7 @@ var listCmd = &cobra.Command{
 
 		// 1. Build the request to list secrets
 		req := &secretmanagerpb.ListSecretsRequest{
-			Parent: GetProjectParents(cmd),
+			Parent: shared.GetProjectParents(cmd),
 		}
 
 		// 2. Create the Secret Manager client
@@ -55,19 +55,6 @@ var listCmd = &cobra.Command{
 			fmt.Printf("- %s\n", secretName)
 		}
 	},
-}
-
-func IsSecretStale(ctx context.Context, client *secretmanager.Client, parent string, secretName string, ttlHours int) bool {
-	name := fmt.Sprintf("%s/secrets/%s/versions/latest", parent, secretName)
-	req := &secretmanagerpb.GetSecretVersionRequest{
-		Name: name,
-	}
-	secret, err := client.GetSecretVersion(ctx, req)
-	if err != nil {
-		fmt.Printf("Failed to get secret: %v\n", err)
-		return true
-	}
-	return secret.CreateTime.AsTime().Before(time.Now().Add(-time.Hour * time.Duration(ttlHours)))
 }
 
 func init() {

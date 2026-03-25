@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/borghives/go-cmd-tool/shared"
 	"github.com/spf13/cobra"
 )
 
@@ -23,34 +24,12 @@ var setAdminCmd = &cobra.Command{
 		name, _ := cmd.Flags().GetString("name")
 
 		fmt.Printf("Action: Creating MongoDB admin user '%s'...\n", name)
-		client := GetDbClient(cmd)
+		client := shared.GetDbClient(cmd)
 		defer client.Disconnect(context.Background())
 
-		err := UpsertDbUser(client, name, password, nil, nil, true)
+		err := shared.UpsertDbUser(client, name, password, nil, nil, true)
 		if err != nil {
 			log.Fatalf("Failed to set admin: %v", err)
-		}
-	},
-}
-
-// Define the "remove" action command
-var removeAdminCmd = &cobra.Command{
-	Use:   "remove",
-	Short: "Remove a MongoDB admin",
-	Run: func(cmd *cobra.Command, args []string) {
-		name, _ := cmd.Flags().GetString("name")
-
-		if name == "" {
-			log.Fatalf("Name is required")
-		}
-
-		fmt.Printf("Action: Remove MongoDB admin '%s'...\n", name)
-		client := GetDbClient(cmd)
-		defer client.Disconnect(context.Background())
-
-		err := DeleteDbUser(client, name)
-		if err != nil {
-			log.Fatalf("Failed to remove admin: %v", err)
 		}
 	},
 }
@@ -61,10 +40,10 @@ var listAdminCmd = &cobra.Command{
 	Short: "List MongoDB admin",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing MongoDB admin...\n")
-		client := GetDbClient(cmd)
+		client := shared.GetDbClient(cmd)
 		defer client.Disconnect(context.Background())
 
-		users, err := QueryDbUser(client)
+		users, err := shared.QueryDbUser(client)
 		if err != nil {
 			log.Fatalf("Failed to list users: %v", err)
 		}
@@ -77,13 +56,12 @@ func init() {
 	// Add the action to the context
 	adminCmd.AddCommand(setAdminCmd)
 	adminCmd.AddCommand(listAdminCmd)
-	adminCmd.AddCommand(removeAdminCmd)
 
 	// Add the context to the root dbenv command
 	rootCmd.AddCommand(adminCmd)
 
 	// Set Client Flags
-	SetClientFlags(adminCmd)
+	shared.SetDbClientFlags(adminCmd)
 
 	// Define persistent flags
 	adminCmd.PersistentFlags().StringP("name", "n", "siteadmin", "Database admin username")

@@ -9,24 +9,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/borghives/go-cmd-tool/shared"
 	"github.com/spf13/cobra"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
-
-type MongoRole struct {
-	Role string `bson:"role"`
-	DB   string `bson:"db"`
-}
-
-type MongoUser struct {
-	User  string      `bson:"user"`
-	Roles []MongoRole `bson:"roles"`
-}
-
-type UsersInfoResponse struct {
-	Users []MongoUser `bson:"users"`
-}
 
 // Define the "user" context command
 var userCmd = &cobra.Command{
@@ -52,10 +37,10 @@ var setUserCmd = &cobra.Command{
 		fmt.Printf("Action: Set MongoDB user '%s'...\n", name)
 		fmt.Printf("Read permission: %v\n", readDb)
 		fmt.Printf("ReadWrite permission: %v\n", readWriteDb)
-		client := GetDbClient(cmd)
+		client := shared.GetDbClient(cmd)
 		defer client.Disconnect(context.Background())
 
-		err := UpsertDbUser(client, name, password, readDb, readWriteDb, false)
+		err := shared.UpsertDbUser(client, name, password, readDb, readWriteDb, false)
 		if err != nil {
 			log.Fatalf("Failed to set user: %v", err)
 		}
@@ -74,10 +59,10 @@ var removeUserCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Action: Remove MongoDB user '%s'...\n", name)
-		client := GetDbClient(cmd)
+		client := shared.GetDbClient(cmd)
 		defer client.Disconnect(context.Background())
 
-		err := DeleteDbUser(client, name)
+		err := shared.DeleteDbUser(client, name)
 		if err != nil {
 			log.Fatalf("Failed to remove user: %v", err)
 		}
@@ -90,10 +75,10 @@ var listUserCmd = &cobra.Command{
 	Short: "List MongoDB users",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing MongoDB users...\n")
-		client := GetDbClient(cmd)
+		client := shared.GetDbClient(cmd)
 		defer client.Disconnect(context.Background())
 
-		users, err := QueryDbUser(client)
+		users, err := shared.QueryDbUser(client)
 		if err != nil {
 			log.Fatalf("Failed to list users: %v", err)
 		}
@@ -102,21 +87,7 @@ var listUserCmd = &cobra.Command{
 	},
 }
 
-func QueryDbUser(client *mongo.Client) (*UsersInfoResponse, error) {
-	usersInfoCmd := bson.D{
-		{Key: "usersInfo", Value: 1},
-	}
-
-	var result UsersInfoResponse
-	err := client.Database("admin").RunCommand(context.Background(), usersInfoCmd).Decode(&result)
-	if err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-}
-
-func printUserInfo(res *UsersInfoResponse, filterAdmin bool) {
+func printUserInfo(res *shared.UsersInfoResponse, filterAdmin bool) {
 	if res == nil {
 		log.Fatalf("Empty User Info")
 	}
@@ -150,102 +121,6 @@ func printUserInfo(res *UsersInfoResponse, filterAdmin bool) {
 	w.Flush()
 }
 
-func translateRole(readDb []string, readWriteDb []string, isAdmin bool) bson.A {
-	roles := bson.A{}
-	for _, db := range readDb {
-		roles = append(roles, bson.M{"role": "read", "db": db})
-	}
-	for _, db := range readWriteDb {
-		roles = append(roles, bson.M{"role": "readWrite", "db": db})
-	}
-	if isAdmin {
-		roles = append(roles, bson.M{"role": "userAdminAnyDatabase", "db": "admin"})
-	}
-	return roles
-}
-
-func CreateDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, isAdmin bool) error {
-	newPassword = ParseHolderString(newPassword)
-
-	if newPassword == "" {
-		return fmt.Errorf("Cannot set empty password\n")
-	}
-
-	createUserCmd := bson.D{
-		{Key: "createUser", Value: username},
-		{Key: "pwd", Value: newPassword},
-		{Key: "roles", Value: translateRole(readDb, readWriteDb, isAdmin)},
-	}
-
-	var result bson.M
-	err := client.Database("admin").RunCommand(context.Background(), createUserCmd).Decode(&result)
-	if err != nil {
-		return err
-	}
-
-	if isAdmin {
-		fmt.Printf("Successfully created admin: %s\n", username)
-	} else {
-		fmt.Printf("Successfully created user: %s\n", username)
-	}
-
-	return nil
-}
-
-func UpdateDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, isAdmin bool) error {
-	roles := translateRole(readDb, readWriteDb, isAdmin)
-	newPassword = ParseHolderString(newPassword)
-
-	if newPassword == "" {
-		return fmt.Errorf("Cannot set empty password\n")
-	}
-
-	fmt.Printf("Roles: %v\n", roles)
-	updateUserCmd := bson.D{
-		{Key: "updateUser", Value: username},
-		{Key: "pwd", Value: newPassword},
-		{Key: "roles", Value: roles},
-	}
-
-	var result bson.M
-	err := client.Database("admin").RunCommand(context.Background(), updateUserCmd).Decode(&result)
-	if err != nil {
-		return err
-	}
-
-	if isAdmin {
-		fmt.Printf("Successfully updated admin: %s\n", username)
-	} else {
-		fmt.Printf("Successfully updated user: %s\n", username)
-	}
-
-	return nil
-}
-
-func UpsertDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, isAdmin bool) error {
-	err := UpdateDbUser(client, username, newPassword, readDb, readWriteDb, isAdmin)
-	if err != nil {
-		return CreateDbUser(client, username, newPassword, readDb, readWriteDb, isAdmin)
-	}
-	return nil
-}
-
-func DeleteDbUser(client *mongo.Client, username string) error {
-	dropUserCmd := bson.D{
-		{Key: "dropUser", Value: username},
-	}
-
-	var result bson.M
-	err := client.Database("admin").RunCommand(context.Background(), dropUserCmd).Decode(&result)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Successfully removed user: %s\n", username)
-
-	return nil
-}
-
 var readDb []string
 var readWriteDb []string
 
@@ -259,7 +134,7 @@ func init() {
 	rootCmd.AddCommand(userCmd)
 
 	// Set Client Flags
-	SetClientFlags(userCmd)
+	shared.SetDbClientFlags(userCmd)
 
 	// Define persistent flags
 	userCmd.PersistentFlags().StringP("name", "n", "", "Database username")

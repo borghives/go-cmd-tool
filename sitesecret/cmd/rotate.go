@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/borghives/go-cmd-tool/shared"
 	"github.com/spf13/cobra"
 )
 
@@ -28,20 +29,20 @@ var rotateCmd = &cobra.Command{
 		secretName := namespace + name
 		fmt.Printf("Secret name: %s\n", secretName)
 
-		payload := GeneratePayload(cmd)
+		payload := shared.GeneratePayload(cmd)
 
 		// 1. Build the request to list secrets
 		ctx := context.Background()
-		client := MustGetSecretClient(ctx)
+		client := shared.MustGetSecretClient(ctx)
 		defer client.Close()
 
 		ttl, _ := cmd.Flags().GetInt("ttl")
 
-		if IsSecretStale(ctx, client, GetProjectParents(cmd), secretName, ttl) {
+		if shared.IsSecretStale(ctx, client, shared.GetProjectParents(cmd), secretName, ttl) {
 			fmt.Println("Generating random payload for secret.")
-			payload = GenerateRandomString(32)
-			CreateSecret(ctx, client, GetProjectParents(cmd), secretName)
-			AddSecretVersion(ctx, client, GetProjectParents(cmd), secretName, payload)
+			payload = shared.GenerateRandomString(32)
+			shared.CreateSecret(ctx, client, shared.GetProjectParents(cmd), secretName)
+			shared.AddSecretVersion(ctx, client, shared.GetProjectParents(cmd), secretName, payload)
 		} else {
 			fmt.Println("Secret is fresh. No rotation needed.")
 		}
