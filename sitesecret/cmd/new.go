@@ -36,9 +36,11 @@ var newCmd = &cobra.Command{
 		client := shared.MustGetSecretClient(ctx)
 		defer client.Close()
 
+		projectParent := shared.GetProjectParents(config.OverrideFromCmd(cmd))
+
 		//ignore error
-		shared.CreateSecret(ctx, client, shared.GetProjectParents(cmd), secretName)
-		shared.AddSecretVersion(ctx, client, shared.GetProjectParents(cmd), secretName, payload)
+		shared.CreateSecret(ctx, client, projectParent, secretName)
+		shared.AddSecretVersion(ctx, client, projectParent, secretName, payload)
 	},
 }
 

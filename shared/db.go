@@ -26,8 +26,12 @@ type UsersInfoResponse struct {
 	Users []MongoUser `bson:"users"`
 }
 
-func MustGetDbClient(cfg SiteConfig) *mongo.Client {
-	uri := cfg.MongoDBUri
+func MustGetDbClient(cfg *SiteConfig) *mongo.Client {
+	uri := ""
+
+	if cfg != nil {
+		uri = cfg.MongoDBUri
+	}
 
 	if uri == "" {
 		fmt.Printf("Using default MongoDB URI: mongodb://127.0.0.1:27017/\n")
@@ -38,7 +42,10 @@ func MustGetDbClient(cfg SiteConfig) *mongo.Client {
 
 	//translate uri
 	var err error
-	uri, err = TranslateMongoURIPassword(uri)
+	uri, err = TranslateMongoURIPassword(cfg, uri)
+	if err != nil {
+		log.Fatalf("Failed to translate secret from URI: %v", err)
+	}
 
 	client, err := mongo.Connect(options.Client().ApplyURI(uri))
 	if err != nil {
@@ -86,11 +93,6 @@ func translateRole(readDb []string, readWriteDb []string, isAdmin bool) bson.A {
 }
 
 func CreateDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, isAdmin bool) error {
-	newPassword, err := ParseSecretHolderString(newPassword)
-	if err != nil {
-		return err
-	}
-
 	if newPassword == "" {
 		return fmt.Errorf("Cannot set empty password\n")
 	}
@@ -102,7 +104,7 @@ func CreateDbUser(client *mongo.Client, username string, newPassword string, rea
 	}
 
 	var result bson.M
-	err = client.Database("admin").RunCommand(context.Background(), createUserCmd).Decode(&result)
+	err := client.Database("admin").RunCommand(context.Background(), createUserCmd).Decode(&result)
 	if err != nil {
 		return err
 	}
@@ -117,11 +119,6 @@ func CreateDbUser(client *mongo.Client, username string, newPassword string, rea
 }
 
 func UpdateDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, isAdmin bool) error {
-	newPassword, err := ParseSecretHolderString(newPassword)
-	if err != nil {
-		return err
-	}
-
 	if newPassword == "" {
 		return fmt.Errorf("Cannot set empty password\n")
 	}
@@ -135,7 +132,7 @@ func UpdateDbUser(client *mongo.Client, username string, newPassword string, rea
 	}
 
 	var result bson.M
-	err = client.Database("admin").RunCommand(context.Background(), updateUserCmd).Decode(&result)
+	err := client.Database("admin").RunCommand(context.Background(), updateUserCmd).Decode(&result)
 	if err != nil {
 		return err
 	}

@@ -27,7 +27,12 @@ var setAdminCmd = &cobra.Command{
 		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
 		defer client.Disconnect(context.Background())
 
-		err := shared.UpsertDbUser(client, name, password, nil, nil, true)
+		newPassword, err := shared.ParseSecretHolderString(config.OverrideFromCmd(cmd), password)
+		if err != nil {
+			log.Fatalf("Failed to parse password: %v", err)
+		}
+
+		err = shared.UpsertDbUser(client, name, newPassword, nil, nil, true)
 		if err != nil {
 			log.Fatalf("Failed to set admin: %v", err)
 		}

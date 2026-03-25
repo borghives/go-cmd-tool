@@ -97,7 +97,7 @@ func CreateSecret(ctx context.Context, client *secretmanager.Client, parent stri
 	return nil
 }
 
-func TranslateMongoURIPassword(uri string) (string, error) {
+func TranslateMongoURIPassword(cfg *SiteConfig, uri string) (string, error) {
 	// 1. Isolate the scheme
 	schemeSplit := strings.SplitN(uri, "://", 2)
 	if len(schemeSplit) != 2 {
@@ -125,14 +125,14 @@ func TranslateMongoURIPassword(uri string) (string, error) {
 	user, pass := userAuth[0], userAuth[1]
 
 	// 4. Translate and Stitch
-	newPass, err := ParseSecretHolderString(pass)
+	newPass, err := ParseSecretHolderString(cfg, pass)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("%s://%s:%s%s", scheme, user, newPass, hostAndPath), nil
 }
 
-func ParseSecretHolderString(s string) (string, error) {
+func ParseSecretHolderString(cfg *SiteConfig, s string) (string, error) {
 	//parse string "[secret:name:version]"
 	//return the secret
 
@@ -157,13 +157,13 @@ func ParseSecretHolderString(s string) (string, error) {
 	}
 
 	//return the secret
-	return ExtractSecret(parts[1], parts[2])
+	return ExtractSecret(cfg, parts[1], parts[2])
 }
 
-func ExtractSecret(name string, version string) (string, error) {
+func ExtractSecret(cfg *SiteConfig, name string, version string) (string, error) {
 	//get the secret from the secret manager
 
-	projectParents := GetProjectParents(nil)
+	projectParents := GetProjectParents(cfg)
 	if projectParents == "" {
 		return "", fmt.Errorf("Failed to find project_id to extract secret from")
 	}
@@ -175,10 +175,7 @@ func ExtractSecret(name string, version string) (string, error) {
 
 	// 2. Create the Secret Manager client
 	ctx := context.Background()
-	client, err := secretmanager.NewClient(ctx)
-	if err != nil {
-		log.Fatalf("failed to setup client: %v", err)
-	}
+	client := MustGetSecretClient(ctx)
 	defer client.Close()
 
 	resp, err := client.AccessSecretVersion(ctx, req)

@@ -38,11 +38,13 @@ var rotateCmd = &cobra.Command{
 
 		ttl, _ := cmd.Flags().GetInt("ttl")
 
-		if shared.IsSecretStale(ctx, client, shared.GetProjectParents(cmd), secretName, ttl) {
+		projectParent := shared.GetProjectParents(config.OverrideFromCmd(cmd))
+
+		if shared.IsSecretStale(ctx, client, projectParent, secretName, ttl) {
 			fmt.Println("Generating random payload for secret.")
 			payload = shared.GenerateRandomString(32)
-			shared.CreateSecret(ctx, client, shared.GetProjectParents(cmd), secretName)
-			shared.AddSecretVersion(ctx, client, shared.GetProjectParents(cmd), secretName, payload)
+			shared.CreateSecret(ctx, client, projectParent, secretName)
+			shared.AddSecretVersion(ctx, client, projectParent, secretName, payload)
 		} else {
 			fmt.Println("Secret is fresh. No rotation needed.")
 		}

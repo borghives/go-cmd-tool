@@ -13,9 +13,9 @@ type SiteConfig struct {
 	MongoDBUri string `mapstructure:"MONGODB_URI"`
 }
 
-func (c SiteConfig) OverrideFromCmd(cmd *cobra.Command) SiteConfig {
+func (c SiteConfig) OverrideFromCmd(cmd *cobra.Command) *SiteConfig {
 	if cmd == nil {
-		return c
+		return &c
 	}
 
 	mongoDBUriFmt, _ := cmd.Flags().GetString("uri")
@@ -23,7 +23,7 @@ func (c SiteConfig) OverrideFromCmd(cmd *cobra.Command) SiteConfig {
 		c.MongoDBUri = mongoDBUriFmt
 	}
 
-	return c
+	return &c
 }
 
 func LoadSiteConfig() (config SiteConfig, err error) {
@@ -49,18 +49,16 @@ func LoadSiteConfig() (config SiteConfig, err error) {
 	return
 }
 
-func GetProjectParents(cmd *cobra.Command) string {
-	projectID := ""
-	if cmd != nil {
-		projectID, _ = cmd.Flags().GetString("project")
+func GetProjectParents(cfg *SiteConfig) string {
+	projectID := os.Getenv("PROJECT_ID")
+
+	if cfg != nil {
+		projectID = cfg.ProjectID
 	}
 
 	if projectID == "" {
-		projectID = os.Getenv("PROJECT_ID")
-		if projectID == "" {
-			fmt.Println("Project flag and environment PROJECT_ID is not set")
-			return ""
-		}
+		fmt.Println("Project flag and environment PROJECT_ID is not set")
+		return ""
 	}
 	return fmt.Sprintf("projects/%s", projectID)
 }

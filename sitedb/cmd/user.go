@@ -40,7 +40,12 @@ var setUserCmd = &cobra.Command{
 		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
 		defer client.Disconnect(context.Background())
 
-		err := shared.UpsertDbUser(client, name, password, readDb, readWriteDb, false)
+		newPassword, err := shared.ParseSecretHolderString(config.OverrideFromCmd(cmd), password)
+		if err != nil {
+			log.Fatalf("Failed to parse password: %v", err)
+		}
+
+		err = shared.UpsertDbUser(client, name, newPassword, readDb, readWriteDb, false)
 		if err != nil {
 			log.Fatalf("Failed to set user: %v", err)
 		}
