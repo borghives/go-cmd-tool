@@ -3,8 +3,8 @@ build:
 	go build -o sitesecret ./sitesecret
 
 install:
-	go install github.com/borghives/sitestate/sitedb@latest
-	go install github.com/borghives/sitestate/sitesecret@latest
+	go install ./sitedb
+	go install ./sitesecret
 
 clean:
 	rm -f sitedb
