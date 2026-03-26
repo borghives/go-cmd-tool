@@ -22,7 +22,7 @@ var listCmd = &cobra.Command{
 
 		// 1. Build the request to list secrets
 		req := &secretmanagerpb.ListSecretsRequest{
-			Parent: shared.GetProjectParents(config.OverrideFromCmd(cmd)),
+			Parent: shared.GetProjectParents(),
 		}
 
 		// 2. Create the Secret Manager client

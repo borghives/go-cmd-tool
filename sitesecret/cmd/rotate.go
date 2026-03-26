@@ -38,7 +38,7 @@ var rotateCmd = &cobra.Command{
 
 		ttl, _ := cmd.Flags().GetInt("ttl")
 
-		projectParent := shared.GetProjectParents(config.OverrideFromCmd(cmd))
+		projectParent := shared.GetProjectParents()
 
 		if shared.IsSecretStale(ctx, client, projectParent, secretName, ttl) {
 			fmt.Println("Generating random payload for secret.")

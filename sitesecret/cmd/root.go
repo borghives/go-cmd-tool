@@ -29,6 +29,8 @@ func init() {
 	cobra.OnInitialize(func() {
 		var err error
 		config, err = shared.LoadSiteConfig()
+		config.MergeFromFile("tool.env")
+		config.MergeFromCmd(rootCmd)
 		if err != nil {
 			fmt.Printf("Failed to load site config: %v\n", err)
 			os.Exit(1)

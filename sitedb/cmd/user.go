@@ -37,10 +37,10 @@ var setUserCmd = &cobra.Command{
 		fmt.Printf("Action: Set MongoDB user '%s'...\n", name)
 		fmt.Printf("Read permission: %v\n", readDb)
 		fmt.Printf("ReadWrite permission: %v\n", readWriteDb)
-		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
+		client := shared.MustGetDbClient(&config)
 		defer client.Disconnect(context.Background())
 
-		newPassword, err := shared.ParseSecretHolderString(config.OverrideFromCmd(cmd), password)
+		newPassword, err := shared.ParseSecretHolderString(password)
 		if err != nil {
 			log.Fatalf("Failed to parse password: %v", err)
 		}
@@ -64,7 +64,7 @@ var removeUserCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Action: Remove MongoDB user '%s'...\n", name)
-		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
+		client := shared.MustGetDbClient(&config)
 		defer client.Disconnect(context.Background())
 
 		err := shared.DeleteDbUser(client, name)
@@ -80,7 +80,7 @@ var listUserCmd = &cobra.Command{
 	Short: "List MongoDB users",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing MongoDB users...\n")
-		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
+		client := shared.MustGetDbClient(&config)
 		defer client.Disconnect(context.Background())
 
 		users, err := shared.QueryDbUser(client)
@@ -137,9 +137,6 @@ func init() {
 
 	// Add the context to the root dbenv command
 	rootCmd.AddCommand(userCmd)
-
-	// Set Client Flags
-	shared.SetDbClientFlags(userCmd)
 
 	// Define persistent flags
 	userCmd.PersistentFlags().StringP("name", "n", "", "Database username")

@@ -48,7 +48,6 @@ func MustGetDbClient(cfg *SiteConfig) *mongo.Client {
 	proxyAddress := ""
 
 	if cfg != nil {
-		uri = cfg.MongoDBAuthUri
 		if uri == "" {
 			uri = cfg.MongoDBUri
 		}
@@ -64,7 +63,7 @@ func MustGetDbClient(cfg *SiteConfig) *mongo.Client {
 
 	//translate uri
 	var err error
-	uri, err = TranslateMongoURIPassword(cfg, uri)
+	uri, err = TranslateMongoURIPassword(uri)
 	if err != nil {
 		log.Fatalf("Failed to translate secret from URI: %v", err)
 	}

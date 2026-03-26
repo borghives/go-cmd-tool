@@ -24,10 +24,10 @@ var setAdminCmd = &cobra.Command{
 		name, _ := cmd.Flags().GetString("name")
 
 		fmt.Printf("Action: Creating MongoDB admin user '%s'...\n", name)
-		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
+		client := shared.MustGetDbClient(&config)
 		defer client.Disconnect(context.Background())
 
-		newPassword, err := shared.ParseSecretHolderString(config.OverrideFromCmd(cmd), password)
+		newPassword, err := shared.ParseSecretHolderString(password)
 		if err != nil {
 			log.Fatalf("Failed to parse password: %v", err)
 		}
@@ -45,7 +45,7 @@ var listAdminCmd = &cobra.Command{
 	Short: "List MongoDB admin",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing MongoDB admin...\n")
-		client := shared.MustGetDbClient(config.OverrideFromCmd(cmd))
+		client := shared.MustGetDbClient(&config)
 		defer client.Disconnect(context.Background())
 
 		users, err := shared.QueryDbUser(client)
@@ -64,9 +64,6 @@ func init() {
 
 	// Add the context to the root dbenv command
 	rootCmd.AddCommand(adminCmd)
-
-	// Set Client Flags
-	shared.SetDbClientFlags(adminCmd)
 
 	// Define persistent flags
 	adminCmd.PersistentFlags().StringP("name", "n", "siteadmin", "Database admin username")
