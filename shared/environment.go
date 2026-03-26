@@ -37,6 +37,10 @@ func LoadSiteConfig() (config SiteConfig, err error) {
 	// 2. Enable environment variable overrides
 	// This is crucial for Docker/Kubernetes production environments
 	viper.AutomaticEnv()
+	viper.BindEnv("PROJECT_ID")
+	viper.BindEnv("MONGODB_URI")
+	viper.BindEnv("MONGODB_AUTH_URI")
+	viper.BindEnv("PROXY_ADDRESS")
 
 	// 3. Read the file
 	if err = viper.ReadInConfig(); err != nil {
