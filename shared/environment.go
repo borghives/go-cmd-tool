@@ -39,7 +39,6 @@ func LoadSiteConfig() (config SiteConfig, err error) {
 	viper.AutomaticEnv()
 	viper.BindEnv("PROJECT_ID")
 	viper.BindEnv("MONGODB_URI")
-	viper.BindEnv("MONGODB_AUTH_URI")
 	viper.BindEnv("PROXY_ADDRESS")
 
 	// 3. Read the file
