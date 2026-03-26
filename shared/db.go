@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"golang.org/x/net/proxy"
 )
 
 type MongoRole struct {
@@ -26,18 +30,33 @@ type UsersInfoResponse struct {
 	Users []MongoUser `bson:"users"`
 }
 
+type mongoDialerWrapper struct {
+	dialer proxy.Dialer
+}
+
+func (m *mongoDialerWrapper) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	if cd, ok := m.dialer.(interface {
+		DialContext(context.Context, string, string) (net.Conn, error)
+	}); ok {
+		return cd.DialContext(ctx, network, addr)
+	}
+	return m.dialer.Dial(network, addr)
+}
+
 func MustGetDbClient(cfg *SiteConfig) *mongo.Client {
 	uri := ""
+	proxyAddress := ""
 
 	if cfg != nil {
 		uri = cfg.MongoDBAuthUri
 		if uri == "" {
 			uri = cfg.MongoDBUri
 		}
+		proxyAddress = cfg.ProxyAddress
 	}
 
 	if uri == "" {
-		fmt.Printf("Using default MongoDB URI: mongodb://127.0.0.1:27017/\n")
+		log.Printf("Using default MongoDB URI: mongodb://127.0.0.1:27017/\n")
 		uri = "mongodb://127.0.0.1:27017/"
 	}
 
@@ -50,16 +69,41 @@ func MustGetDbClient(cfg *SiteConfig) *mongo.Client {
 		log.Fatalf("Failed to translate secret from URI: %v", err)
 	}
 
-	client, err := mongo.Connect(options.Client().ApplyURI(uri))
-	if err != nil {
-		log.Fatalf("Failed to connect: %v", err)
+	clientOptions := options.Client().ApplyURI(uri)
+
+	if proxyAddress != "" {
+		log.Println("Using proxy: ", proxyAddress)
+		proxyUrl, err := url.Parse(proxyAddress)
+		if err != nil {
+			log.Fatalf("Failed to parse proxy address: %v", err)
+		}
+
+		dialer, err := proxy.FromURL(proxyUrl, proxy.Direct)
+		if err != nil {
+			log.Fatalf("Failed to create dialer: %v", err)
+		}
+
+		clientOptions = clientOptions.SetDialer(&mongoDialerWrapper{dialer: dialer})
 	}
-	fmt.Printf("Pinging...")
-	err = client.Ping(context.Background(), nil)
-	if err != nil {
-		log.Fatalf("Failed to ping client: %v", err)
+
+	var client *mongo.Client
+	for i := range 5 {
+		client, err = mongo.Connect(clientOptions)
+		if err == nil {
+			err = client.Ping(context.Background(), nil)
+		}
+		if err == nil {
+			log.Printf("MongoDb Ping Success")
+			break
+		}
+		log.Printf("MongoDb Ping Failed.  Waiting for MongoDB... (attempt %d): %v", i+1, err)
+		time.Sleep(5 * time.Second)
 	}
-	fmt.Printf("Connected!\n")
+
+	if client == nil {
+		log.Fatalf("Failed to connect to MongoDB")
+	}
+
 	return client
 }
 

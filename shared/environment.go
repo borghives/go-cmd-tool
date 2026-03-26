@@ -10,6 +10,7 @@ import (
 
 type SiteConfig struct {
 	ProjectID      string `mapstructure:"PROJECT_ID"`
+	ProxyAddress   string `mapstructure:"PROXY_ADDRESS"`
 	MongoDBUri     string `mapstructure:"MONGODB_URI"`
 	MongoDBAuthUri string `mapstructure:"MONGODB_AUTH_URI"`
 }
