@@ -29,6 +29,20 @@
                 "--write",
                 "pieriansea"
             ]
+        },
+        {
+            "name": "sitedb data init",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/sitedb",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "data",
+                "init",
+                "--file",
+                "test_db.yaml"
+            ]
         }
     ]
 }

@@ -125,35 +125,35 @@ func TranslateMongoURIPassword(uri string) (string, error) {
 	user, pass := userAuth[0], userAuth[1]
 
 	// 4. Translate and Stitch
-	newPass, err := ParseSecretHolderString(pass)
-	if err != nil {
-		return "", err
+	newPass, err := ParseSecretSourceString(pass)
+	if newPass == "" {
+		return "", fmt.Errorf("URI Password is empty %v", err)
 	}
 	return fmt.Sprintf("%s://%s:%s%s", scheme, user, newPass, hostAndPath), nil
 }
 
-func ParseSecretHolderString(s string) (string, error) {
-	//parse string "[secret:name:version]"
+func ParseSecretSourceString(s string) (string, error) {
+	//parse string "__secret:name:version__"
 	//return the secret
 
 	//check if the string is a holder string
-	if !strings.HasPrefix(s, "[") || !strings.HasSuffix(s, "]") {
-		return s, nil
+	if !strings.HasPrefix(s, "__") || !strings.HasSuffix(s, "__") {
+		return s, fmt.Errorf("Not a secret source string")
 	}
 
-	//remove the brackets
-	s = s[1 : len(s)-1]
+	//remove the underscores
+	s = s[2 : len(s)-2]
 
 	//split the string by ":"
 	parts := strings.Split(s, ":")
 
-	//check if the string is a holder string
+	//check if the string is a source string
 	if len(parts) != 3 {
-		return "", fmt.Errorf("Invalid secret holder string format expect [secret:[name]:[version]]")
+		return "", fmt.Errorf("Invalid secret source string format expect __secret:<name>:<version>__")
 	}
 
 	if parts[0] != "secret" {
-		return "", fmt.Errorf("Invalid secret holder string format expect [secret:[name]:[version]]")
+		return "", fmt.Errorf("Invalid secret source string format expect __secret:<name>:<version>__")
 	}
 
 	//return the secret

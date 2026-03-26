@@ -25,6 +25,9 @@ func Execute() {
 func init() {
 	// Set Client Flags
 	shared.SetDbClientFlags(rootCmd)
+	rootCmd.AddCommand(adminCmd)
+	rootCmd.AddCommand(dbCmd)
+	rootCmd.AddCommand(userCmd)
 
 	cobra.OnInitialize(func() {
 		var err error

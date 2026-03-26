@@ -22,17 +22,22 @@ var setAdminCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		password, _ := cmd.Flags().GetString("password")
 		name, _ := cmd.Flags().GetString("name")
+		creator, _ := cmd.Flags().GetStringSlice("creator")
+
+		if password == "" {
+			log.Fatalf("Password is required")
+		}
 
 		fmt.Printf("Action: Creating MongoDB admin user '%s'...\n", name)
 		client := shared.MustGetDbClient(&config)
 		defer client.Disconnect(context.Background())
 
-		newPassword, err := shared.ParseSecretHolderString(password)
-		if err != nil {
-			log.Fatalf("Failed to parse password: %v", err)
+		newPassword, err := shared.ParseSecretSourceString(password)
+		if newPassword == "" {
+			log.Fatalf("Failed to extract password: %v", err)
 		}
 
-		err = shared.UpsertDbUser(client, name, newPassword, nil, nil, true)
+		err = shared.UpsertDbUser(client, name, newPassword, nil, nil, creator, true)
 		if err != nil {
 			log.Fatalf("Failed to set admin: %v", err)
 		}
@@ -57,17 +62,18 @@ var listAdminCmd = &cobra.Command{
 	},
 }
 
+var creator []string
+
 func init() {
 	// Add the action to the context
 	adminCmd.AddCommand(setAdminCmd)
 	adminCmd.AddCommand(listAdminCmd)
-
-	// Add the context to the root dbenv command
-	rootCmd.AddCommand(adminCmd)
 
 	// Define persistent flags
 	adminCmd.PersistentFlags().StringP("name", "n", "siteadmin", "Database admin username")
 
 	// Define flags specifically for the 'set' action
 	setAdminCmd.Flags().StringP("password", "p", "", "New admin's password")
+
+	setAdminCmd.Flags().StringSliceVarP(&creator, "creator", "c", []string{}, "List of databases the admin can create db and indexes")
 }

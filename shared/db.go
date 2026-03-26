@@ -121,7 +121,7 @@ func QueryDbUser(client *mongo.Client) (*UsersInfoResponse, error) {
 	return &result, nil
 }
 
-func translateRole(readDb []string, readWriteDb []string, isAdmin bool) bson.A {
+func translateRole(readDb []string, readWriteDb []string, creator []string, userAdmin bool) bson.A {
 	roles := bson.A{}
 	for _, db := range readDb {
 		roles = append(roles, bson.M{"role": "read", "db": db})
@@ -129,13 +129,17 @@ func translateRole(readDb []string, readWriteDb []string, isAdmin bool) bson.A {
 	for _, db := range readWriteDb {
 		roles = append(roles, bson.M{"role": "readWrite", "db": db})
 	}
-	if isAdmin {
+	if userAdmin {
 		roles = append(roles, bson.M{"role": "userAdminAnyDatabase", "db": "admin"})
+	}
+	for _, db := range creator {
+		roles = append(roles, bson.M{"role": "dbAdmin", "db": db})
+		roles = append(roles, bson.M{"role": "readWrite", "db": db})
 	}
 	return roles
 }
 
-func CreateDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, isAdmin bool) error {
+func CreateDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, creator []string, userAdmin bool) error {
 	if newPassword == "" {
 		return fmt.Errorf("Cannot set empty password\n")
 	}
@@ -143,7 +147,7 @@ func CreateDbUser(client *mongo.Client, username string, newPassword string, rea
 	createUserCmd := bson.D{
 		{Key: "createUser", Value: username},
 		{Key: "pwd", Value: newPassword},
-		{Key: "roles", Value: translateRole(readDb, readWriteDb, isAdmin)},
+		{Key: "roles", Value: translateRole(readDb, readWriteDb, creator, userAdmin)},
 	}
 
 	var result bson.M
@@ -152,7 +156,7 @@ func CreateDbUser(client *mongo.Client, username string, newPassword string, rea
 		return err
 	}
 
-	if isAdmin {
+	if userAdmin {
 		fmt.Printf("Successfully created admin: %s\n", username)
 	} else {
 		fmt.Printf("Successfully created user: %s\n", username)
@@ -161,12 +165,12 @@ func CreateDbUser(client *mongo.Client, username string, newPassword string, rea
 	return nil
 }
 
-func UpdateDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, isAdmin bool) error {
+func UpdateDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, creator []string, userAdmin bool) error {
 	if newPassword == "" {
 		return fmt.Errorf("Cannot set empty password\n")
 	}
 
-	roles := translateRole(readDb, readWriteDb, isAdmin)
+	roles := translateRole(readDb, readWriteDb, creator, userAdmin)
 	fmt.Printf("Roles: %v\n", roles)
 	updateUserCmd := bson.D{
 		{Key: "updateUser", Value: username},
@@ -180,7 +184,7 @@ func UpdateDbUser(client *mongo.Client, username string, newPassword string, rea
 		return err
 	}
 
-	if isAdmin {
+	if userAdmin {
 		fmt.Printf("Successfully updated admin: %s\n", username)
 	} else {
 		fmt.Printf("Successfully updated user: %s\n", username)
@@ -189,10 +193,10 @@ func UpdateDbUser(client *mongo.Client, username string, newPassword string, rea
 	return nil
 }
 
-func UpsertDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, isAdmin bool) error {
-	err := UpdateDbUser(client, username, newPassword, readDb, readWriteDb, isAdmin)
+func UpsertDbUser(client *mongo.Client, username string, newPassword string, readDb []string, readWriteDb []string, creator []string, userAdmin bool) error {
+	err := UpdateDbUser(client, username, newPassword, readDb, readWriteDb, creator, userAdmin)
 	if err != nil {
-		return CreateDbUser(client, username, newPassword, readDb, readWriteDb, isAdmin)
+		return CreateDbUser(client, username, newPassword, readDb, readWriteDb, creator, userAdmin)
 	}
 	return nil
 }

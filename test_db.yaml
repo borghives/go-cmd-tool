@@ -1,0 +1,22 @@
+databases:
+  - name: "my_site_db"
+    collections:
+      - name: "users"
+        indexes:
+          - keys:
+              - field: "email"
+                order: 1
+            unique: true
+          - keys:
+              - field: "username"
+                order: 1
+              - field: "status"
+                order: -1
+            unique: false
+users:
+  - name: "testuser"
+    secret-src: "__secret:mongodb_testuser:latest__"
+    write: ["my_site_db"]
+    creator: ["my_site_db"]
+    admin: false
+    

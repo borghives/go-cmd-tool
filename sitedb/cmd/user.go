@@ -40,12 +40,12 @@ var setUserCmd = &cobra.Command{
 		client := shared.MustGetDbClient(&config)
 		defer client.Disconnect(context.Background())
 
-		newPassword, err := shared.ParseSecretHolderString(password)
-		if err != nil {
-			log.Fatalf("Failed to parse password: %v", err)
+		newPassword, err := shared.ParseSecretSourceString(password)
+		if newPassword == "" {
+			log.Fatalf("Failed to extract password source: %v", err)
 		}
 
-		err = shared.UpsertDbUser(client, name, newPassword, readDb, readWriteDb, false)
+		err = shared.UpsertDbUser(client, name, newPassword, readDb, readWriteDb, nil, false)
 		if err != nil {
 			log.Fatalf("Failed to set user: %v", err)
 		}
@@ -134,9 +134,6 @@ func init() {
 	userCmd.AddCommand(setUserCmd)
 	userCmd.AddCommand(listUserCmd)
 	userCmd.AddCommand(removeUserCmd)
-
-	// Add the context to the root dbenv command
-	rootCmd.AddCommand(userCmd)
 
 	// Define persistent flags
 	userCmd.PersistentFlags().StringP("name", "n", "", "Database username")
