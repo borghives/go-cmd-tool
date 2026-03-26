@@ -41,7 +41,7 @@
                 "data",
                 "init",
                 "--file",
-                "test_db.yaml"
+                "db.yaml"
             ]
         }
     ]

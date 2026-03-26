@@ -65,7 +65,7 @@ func MustGetDbClient(cfg *SiteConfig) *mongo.Client {
 	var err error
 	uri, err = TranslateMongoURIPassword(uri)
 	if err != nil {
-		log.Fatalf("Failed to translate secret from URI: %v", err)
+		log.Fatalf("Failed to translate secret from URI: %s | %v", uri, err)
 	}
 
 	clientOptions := options.Client().ApplyURI(uri)
