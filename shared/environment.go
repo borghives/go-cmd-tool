@@ -10,7 +10,7 @@ import (
 
 type SiteConfig struct {
 	ProjectID      string `mapstructure:"PROJECT_ID"`
-	ProxyAddress   string `mapstructure:"PROXY_ADDRESS"`
+	ProxyAddress   string `mapstructure:"ALL_PROXY"`
 	MongoDBUri     string `mapstructure:"MONGODB_URI"`
 	MongoDBAuthUri string `mapstructure:"MONGODB_AUTH_URI"`
 }
@@ -39,7 +39,7 @@ func LoadSiteConfig() (config SiteConfig, err error) {
 	viper.AutomaticEnv()
 	viper.BindEnv("PROJECT_ID")
 	viper.BindEnv("MONGODB_URI")
-	viper.BindEnv("PROXY_ADDRESS")
+	viper.BindEnv("ALL_PROXY")
 
 	// 3. Read the file
 	if err = viper.ReadInConfig(); err != nil {
