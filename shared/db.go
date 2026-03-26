@@ -94,17 +94,14 @@ func MustGetDbClient(cfg *SiteConfig) *mongo.Client {
 		}
 		if err == nil {
 			log.Printf("MongoDb Ping Success")
-			break
+			return client
 		}
 		log.Printf("MongoDb Ping Failed.  Waiting for MongoDB... (attempt %d): %v", i+1, err)
 		time.Sleep(5 * time.Second)
 	}
 
-	if client == nil {
-		log.Fatalf("Failed to connect to MongoDB")
-	}
-
-	return client
+	log.Fatalf("Failed to connect to MongoDB")
+	return nil
 }
 
 func SetDbClientFlags(cmd *cobra.Command) {
