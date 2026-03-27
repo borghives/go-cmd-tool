@@ -28,6 +28,7 @@ func init() {
 	rootCmd.AddCommand(adminCmd)
 	rootCmd.AddCommand(dbCmd)
 	rootCmd.AddCommand(userCmd)
+	rootCmd.AddCommand(rsCmd)
 
 	cobra.OnInitialize(func() {
 		var err error
