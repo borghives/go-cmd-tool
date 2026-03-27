@@ -43,14 +43,52 @@ func (m *mongoDialerWrapper) DialContext(ctx context.Context, network, addr stri
 	return m.dialer.Dial(network, addr)
 }
 
-func MustGetDbClient(cfg *SiteConfig) *mongo.Client {
+func wrapMongoOption(uri string, proxyAddress string) (*options.ClientOptions, error) {
+	clientOptions := options.Client().ApplyURI(uri)
+
+	if proxyAddress != "" {
+		log.Println("Using proxy: ", proxyAddress)
+		proxyUrl, err := url.Parse(proxyAddress)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse proxy address: %v", err)
+		}
+
+		dialer, err := proxy.FromURL(proxyUrl, proxy.Direct)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create dialer: %v", err)
+		}
+
+		clientOptions = clientOptions.SetDialer(&mongoDialerWrapper{dialer: dialer})
+	}
+
+	return clientOptions, nil
+}
+
+func tryConnectMongo(clientOptions *options.ClientOptions, n int) (*mongo.Client, error) {
+	var client *mongo.Client
+	var err error
+	for i := range n {
+		client, err = mongo.Connect(clientOptions)
+		if err == nil {
+			err = client.Ping(context.Background(), nil)
+		}
+		if err == nil {
+			log.Printf("MongoDb Ping Success")
+			return client, nil
+		}
+		log.Printf("MongoDb Ping Failed.  Waiting for MongoDB... (attempt %d): %v", i+1, err)
+		time.Sleep(5 * time.Second)
+	}
+
+	return nil, err
+}
+
+func MustConnectAdminDbClient(cfg *SiteConfig, creatorAffinity bool) *mongo.Client {
 	uri := ""
 	proxyAddress := ""
 
 	if cfg != nil {
-		if uri == "" {
-			uri = cfg.MongoDBUri
-		}
+		uri = cfg.FindPrivilegeMongoUri(creatorAffinity)
 		proxyAddress = cfg.ProxyAddress
 	}
 
@@ -68,39 +106,53 @@ func MustGetDbClient(cfg *SiteConfig) *mongo.Client {
 		log.Fatalf("Failed to translate secret from URI: %s | %v", uri, err)
 	}
 
-	clientOptions := options.Client().ApplyURI(uri)
-
-	if proxyAddress != "" {
-		log.Println("Using proxy: ", proxyAddress)
-		proxyUrl, err := url.Parse(proxyAddress)
-		if err != nil {
-			log.Fatalf("Failed to parse proxy address: %v", err)
-		}
-
-		dialer, err := proxy.FromURL(proxyUrl, proxy.Direct)
-		if err != nil {
-			log.Fatalf("Failed to create dialer: %v", err)
-		}
-
-		clientOptions = clientOptions.SetDialer(&mongoDialerWrapper{dialer: dialer})
+	clientOptions, err := wrapMongoOption(uri, proxyAddress)
+	if err != nil {
+		log.Fatalf("Failed to wrap mongo option: %v", err)
 	}
 
-	var client *mongo.Client
-	for i := range 5 {
-		client, err = mongo.Connect(clientOptions)
-		if err == nil {
-			err = client.Ping(context.Background(), nil)
-		}
-		if err == nil {
-			log.Printf("MongoDb Ping Success")
-			return client
-		}
-		log.Printf("MongoDb Ping Failed.  Waiting for MongoDB... (attempt %d): %v", i+1, err)
-		time.Sleep(5 * time.Second)
+	client, err := tryConnectMongo(clientOptions, 5)
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
 
-	log.Fatalf("Failed to connect to MongoDB")
-	return nil
+	return client
+}
+
+func MustConnectDbClient(cfg *SiteConfig) *mongo.Client {
+	uri := ""
+	proxyAddress := ""
+
+	if cfg != nil {
+		uri = cfg.MongoDBUri
+		proxyAddress = cfg.ProxyAddress
+	}
+
+	if uri == "" {
+		log.Printf("Using default MongoDB URI: mongodb://127.0.0.1:27017/\n")
+		uri = "mongodb://127.0.0.1:27017/"
+	}
+
+	uri = os.ExpandEnv(uri)
+
+	//translate uri
+	var err error
+	uri, err = TranslateMongoURIPassword(uri)
+	if err != nil {
+		log.Fatalf("Failed to translate secret from URI: %s | %v", uri, err)
+	}
+
+	clientOptions, err := wrapMongoOption(uri, proxyAddress)
+	if err != nil {
+		log.Fatalf("Failed to wrap mongo option: %v", err)
+	}
+
+	client, err := tryConnectMongo(clientOptions, 5)
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
+
+	return client
 }
 
 func SetDbClientFlags(cmd *cobra.Command) {
@@ -131,6 +183,7 @@ func translateRole(readDb []string, readWriteDb []string, creator []string, user
 	}
 	if userAdmin {
 		roles = append(roles, bson.M{"role": "userAdminAnyDatabase", "db": "admin"})
+		roles = append(roles, bson.M{"role": "clusterAdmin", "db": "admin"})
 	}
 	for _, db := range creator {
 		roles = append(roles, bson.M{"role": "dbAdmin", "db": db})

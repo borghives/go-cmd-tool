@@ -27,10 +27,16 @@ type IndexConfig struct {
 	Unique bool       `yaml:"unique"`
 }
 
+type TimeseriesInfo struct {
+	TimeField string `yaml:"time-field"`
+	MetaField string `yaml:"meta-field"`
+}
+
 // CollectionConfig represents the configuration for a MongoDB collection and its internal indexes.
 type CollectionConfig struct {
-	Name    string        `yaml:"name"`
-	Indexes []IndexConfig `yaml:"indexes"`
+	Name           string          `yaml:"name"`
+	Indexes        []IndexConfig   `yaml:"indexes"`
+	TimeseriesInfo *TimeseriesInfo `yaml:"timeseries-info,omitempty"`
 }
 
 // DatabaseConfig represents a MongoDB database and its collections.
@@ -83,7 +89,7 @@ var dbDeclareCmd = &cobra.Command{
 		}
 
 		// 2. Connect to MongoDB
-		client := shared.MustGetDbClient(&config)
+		client := shared.MustConnectAdminDbClient(&config, true)
 		defer client.Disconnect(context.Background())
 
 		// 3. Process the configuration

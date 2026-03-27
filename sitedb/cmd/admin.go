@@ -29,7 +29,7 @@ var setAdminCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Action: Creating MongoDB admin user '%s'...\n", name)
-		client := shared.MustGetDbClient(&config)
+		client := shared.MustConnectAdminDbClient(&config, false)
 		defer client.Disconnect(context.Background())
 
 		newPassword, err := shared.ParseSecretSourceString(password)
@@ -50,7 +50,7 @@ var listAdminCmd = &cobra.Command{
 	Short: "List MongoDB admin",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing MongoDB admin...\n")
-		client := shared.MustGetDbClient(&config)
+		client := shared.MustConnectDbClient(&config)
 		defer client.Disconnect(context.Background())
 
 		users, err := shared.QueryDbUser(client)

@@ -1,16 +1,21 @@
 package shared
 
 import (
+	"context"
 	"fmt"
 
+	dotenvsecret "github.com/borghives/dotenvsecret/go-dotenvsecret"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 type SiteConfig struct {
-	ProjectID    string `mapstructure:"PROJECT_ID"`
-	ProxyAddress string `mapstructure:"ALL_PROXY"`
-	MongoDBUri   string `mapstructure:"MONGODB_URI"`
+	ProjectID         string `mapstructure:"PROJECT_ID"`
+	ProxyAddress      string `mapstructure:"ALL_PROXY"`
+	MongoDBCmdUri     string
+	MongoDBUri        string `mapstructure:"MONGODB_URI"`
+	MongoDBAdminUri   string `mapstructure:"MONGODB_ADMIN_URI"`
+	MongoDBCreatorUri string `mapstructure:"MONGODB_CREATOR_URI"`
 }
 
 func (c *SiteConfig) MergeFromCmd(cmd *cobra.Command) *SiteConfig {
@@ -20,6 +25,7 @@ func (c *SiteConfig) MergeFromCmd(cmd *cobra.Command) *SiteConfig {
 
 	if flag := cmd.Flags().Lookup("uri"); flag != nil {
 		viper.BindPFlag("MONGODB_URI", flag)
+		c.MongoDBCmdUri = flag.Value.String()
 	}
 	if flag := cmd.Flags().Lookup("project"); flag != nil {
 		viper.BindPFlag("PROJECT_ID", flag)
@@ -37,6 +43,26 @@ func (c *SiteConfig) MergeFromFile(name string) *SiteConfig {
 	return c
 }
 
+func (c *SiteConfig) FindPrivilegeMongoUri(creator bool) string {
+	if c.MongoDBCmdUri != "" {
+		return c.MongoDBCmdUri
+	}
+
+	if creator && c.MongoDBCreatorUri != "" {
+		return c.MongoDBCreatorUri
+	}
+
+	if c.MongoDBAdminUri != "" {
+		return c.MongoDBAdminUri
+	}
+
+	if c.MongoDBCreatorUri != "" {
+		return c.MongoDBCreatorUri
+	}
+
+	return c.MongoDBUri
+}
+
 func LoadSiteConfig() (config SiteConfig, err error) {
 	// 1. Tell Viper where to look for the file
 	viper.AddConfigPath(".")    // Search in the current working directory
@@ -51,11 +77,15 @@ func LoadSiteConfig() (config SiteConfig, err error) {
 		}
 	}
 
+	dotenvsecret.Load(context.Background(), dotenvsecret.NewGCPSecretManager())
+
 	// 2. Enable environment variable overrides
 	// This is crucial for Docker/Kubernetes production environments
+	viper.BindEnv("ALL_PROXY")
 	viper.BindEnv("PROJECT_ID")
 	viper.BindEnv("MONGODB_URI")
-	viper.BindEnv("ALL_PROXY")
+	viper.BindEnv("MONGODB_ADMIN_URI")
+	viper.BindEnv("MONGODB_CREATOR_URI")
 	viper.AutomaticEnv()
 
 	// 4. Unmarshal the values into our struct
