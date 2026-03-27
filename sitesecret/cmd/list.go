@@ -33,7 +33,6 @@ var listCmd = &cobra.Command{
 		}
 		defer client.Close()
 
-		namespace, _ := cmd.Flags().GetString("namespace")
 		// 3. Iterate over the secrets
 		it := client.ListSecrets(ctx, req)
 		for {
@@ -48,15 +47,7 @@ var listCmd = &cobra.Command{
 			secretParts := strings.Split(secret.Name, "/")
 			secretName := secretParts[3]
 
-			if namespace != "" && !strings.HasPrefix(secretName, namespace+"_") {
-				continue
-			}
-
 			fmt.Printf("- %s\n", secretName)
 		}
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(listCmd)
 }

@@ -23,7 +23,11 @@ func Execute() {
 var config shared.SiteConfig
 
 func init() {
-	rootCmd.PersistentFlags().StringP("namespace", "s", "", "Namespace prefix")
+	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(newCmd)
+	rootCmd.AddCommand(extractCmd)
+	rootCmd.AddCommand(rotateCmd)
+
 	rootCmd.PersistentFlags().StringP("project", "p", "", "Project ID")
 
 	cobra.OnInitialize(func() {

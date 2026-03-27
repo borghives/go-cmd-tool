@@ -15,18 +15,11 @@ var rotateCmd = &cobra.Command{
 	Short: "Rotate a secret",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Rotating a secret...\n")
-		name, _ := cmd.Flags().GetString("name")
-		if name == "" {
+		secretName, _ := cmd.Flags().GetString("name")
+		if secretName == "" {
 			log.Fatalf("Secret name is required")
 		}
 
-		namespace, _ := cmd.Flags().GetString("namespace")
-		if namespace != "" {
-			namespace = namespace + "_"
-
-		}
-
-		secretName := namespace + name
 		fmt.Printf("Secret name: %s\n", secretName)
 
 		payload := shared.GeneratePayload(cmd)
@@ -52,8 +45,6 @@ var rotateCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(rotateCmd)
-
 	rotateCmd.Flags().StringP("name", "n", "", "Secret name")
 	rotateCmd.Flags().IntP("ttl", "", 24, "Secret time to live in hours.  If the secret is older than this value, it will be rotated.")
 

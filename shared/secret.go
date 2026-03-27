@@ -132,6 +132,15 @@ func TranslateMongoURIPassword(uri string) (string, error) {
 	return fmt.Sprintf("%s://%s:%s%s", scheme, user, newPass, hostAndPath), nil
 }
 
+func ParseSecretVersionName(s string) (string, error) {
+	//split the string by ":"
+	parts := strings.Split(s, ":")
+	if len(parts) == 2 {
+		return ExtractSecret(parts[0], parts[1])
+	}
+	return ExtractSecret(s, "latest")
+}
+
 func ParseSecretSourceString(s string) (string, error) {
 	//parse string "__secret:name:version__"
 	//return the secret
