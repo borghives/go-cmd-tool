@@ -31,6 +31,29 @@ var rsStatusCmd = &cobra.Command{
 		}
 
 		printSyncStatus(status)
+
+		fmt.Printf("\n")
+
+		stats, err := getServerHealth(client)
+		if err != nil {
+			log.Fatalf("Failed to get server health: %v", err)
+		}
+		printServerHealth(stats)
+	},
+}
+
+var reVoteCmd = &cobra.Command{
+	Use:   "revote",
+	Short: "Force MongoDB replica set to revote",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("Action: Force MongoDB replica set to revote...\n")
+		client := shared.MustConnectAdminDbClient(&config, false)
+		defer client.Disconnect(context.Background())
+
+		err := forceElection(client)
+		if err != nil {
+			log.Fatalf("Failed to force election: %v", err)
+		}
 	},
 }
 
@@ -47,6 +70,25 @@ type Member struct {
 	OptimeDate     time.Time `bson:"optimeDate"`
 	SyncSourceHost string    `bson:"syncSourceHost"`
 	Health         int       `bson:"health"` // 1 for up, 0 for down
+}
+
+type ServerStatus struct {
+	Uptime      int64 `bson:"uptime"`
+	Connections struct {
+		Current   int `bson:"current"`
+		Available int `bson:"available"`
+	} `bson:"connections"`
+	Opcounters struct {
+		Insert  int64 `bson:"insert"`
+		Query   int64 `bson:"query"`
+		Update  int64 `bson:"update"`
+		Delete  int64 `bson:"delete"`
+		Command int64 `bson:"command"`
+	} `bson:"opcounters"`
+	Mem struct {
+		Resident int64 `bson:"resident"` // in MB
+		Virtual  int64 `bson:"virtual"`
+	} `bson:"mem"`
 }
 
 func printSyncStatus(status *RSStatus) {
@@ -75,6 +117,14 @@ func printSyncStatus(status *RSStatus) {
 		)
 	}
 }
+func printServerHealth(stats *ServerStatus) {
+
+	fmt.Printf("--- Server Health ---\n")
+	fmt.Printf("Uptime:      %d seconds\n", stats.Uptime)
+	fmt.Printf("Connections: %d used / %d available\n", stats.Connections.Current, stats.Connections.Available)
+	fmt.Printf("Memory:      %d MB Resident\n", stats.Mem.Resident)
+	fmt.Printf("Throughput:  Q:%d I:%d U:%d\n", stats.Opcounters.Query, stats.Opcounters.Insert, stats.Opcounters.Update)
+}
 
 func getReplicaSetStatus(client *mongo.Client) (*RSStatus, error) {
 	// rs.status() must be run against the 'admin' database
@@ -93,6 +143,36 @@ func getReplicaSetStatus(client *mongo.Client) (*RSStatus, error) {
 	return &result, nil
 }
 
+func forceElection(client *mongo.Client) error {
+	adminDB := client.Database("admin")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Command: replSetStepDown
+	// 60 is the 'stepDownSecs' - how long the node stays ineligible to be Primary
+	command := bson.D{{Key: "replSetStepDown", Value: 60}}
+
+	err := adminDB.RunCommand(ctx, command).Err()
+	if err != nil {
+		// Note: The driver often returns an error here because the
+		// connection is dropped when the node steps down.
+		// This is usually expected behavior.
+		return err
+	}
+	return nil
+}
+
+func getServerHealth(client *mongo.Client) (*ServerStatus, error) {
+	var stats ServerStatus
+	err := client.Database("admin").RunCommand(context.TODO(), bson.D{{Key: "serverStatus", Value: 1}}).Decode(&stats)
+	if err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
+}
+
 func init() {
 	rsCmd.AddCommand(rsStatusCmd)
+	rsCmd.AddCommand(reVoteCmd)
 }
