@@ -1,0 +1,2 @@
+sitesecret rotate --name mongodb_intuser
+sitedb admin set --name intuser --password __secret:mongodb_intuser:latest__ --creator officium,market_data,pieriansea,pierianauth
