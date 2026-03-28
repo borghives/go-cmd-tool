@@ -3,6 +3,7 @@ package shared
 import (
 	"context"
 	"fmt"
+	"os"
 
 	dotenvsecret "github.com/borghives/dotenvsecret/go-dotenvsecret"
 	"github.com/spf13/cobra"
@@ -77,7 +78,17 @@ func LoadSiteConfig() (config SiteConfig, err error) {
 		}
 	}
 
-	dotenvsecret.Load(context.Background(), dotenvsecret.NewGCPSecretManager())
+	projectId := os.Getenv("PROJECT_ID")
+	if projectId == "" {
+		projectId = viper.GetString("PROJECT_ID")
+		if projectId != "" {
+			os.Setenv("PROJECT_ID", projectId)
+		}
+	}
+
+	if projectId != "" {
+		dotenvsecret.Load(context.Background(), dotenvsecret.NewGCPSecretManager())
+	}
 
 	// 2. Enable environment variable overrides
 	// This is crucial for Docker/Kubernetes production environments
