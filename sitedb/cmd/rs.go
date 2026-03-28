@@ -100,7 +100,7 @@ func printSyncStatus(status *RSStatus) {
 		syncSource := m.SyncSourceHost
 		if syncSource == "" {
 			if m.StateStr == "PRIMARY" {
-				syncSource = "N/A (Primary)"
+				syncSource = "SELF (Primary)"
 			} else {
 				syncSource = "Unknown/None"
 			}
