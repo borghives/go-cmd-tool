@@ -64,7 +64,7 @@ var removeUserCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Action: Remove MongoDB user '%s'...\n", name)
-		client := shared.MustConnectDbClient(&config)
+		client := shared.MustConnectAdminDbClient(&config, false)
 		defer client.Disconnect(context.Background())
 
 		err := shared.DeleteDbUser(client, name)
@@ -80,7 +80,7 @@ var listUserCmd = &cobra.Command{
 	Short: "List MongoDB users",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing MongoDB users...\n")
-		client := shared.MustConnectDbClient(&config)
+		client := shared.MustConnectAdminDbClient(&config, false)
 		defer client.Disconnect(context.Background())
 
 		users, err := shared.QueryDbUser(client)

@@ -124,6 +124,10 @@ func TranslateMongoURIPassword(uri string) (string, error) {
 
 	user, pass := userAuth[0], userAuth[1]
 
+	if user != "" {
+		fmt.Printf("URI user: %s\n", user)
+	}
+
 	// 4. Translate and Stitch
 	newPass, err := ParseSecretSourceString(pass)
 	if newPass == "" {
