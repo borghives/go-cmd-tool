@@ -1,16 +1,11 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"strings"
 
-	secretmanager "cloud.google.com/go/secretmanager/apiv1"
-	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
-	"github.com/borghives/go-cmd-tool/shared"
+	"github.com/borghives/kosmos-go"
 	"github.com/spf13/cobra"
-	"google.golang.org/api/iterator"
 )
 
 // Define the "list" context command
@@ -19,35 +14,13 @@ var listCmd = &cobra.Command{
 	Short: "List secrets",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing secrets...\n")
-
-		// 1. Build the request to list secrets
-		req := &secretmanagerpb.ListSecretsRequest{
-			Parent: shared.GetProjectParents(),
-		}
-
-		// 2. Create the Secret Manager client
-		ctx := context.Background()
-		client, err := secretmanager.NewClient(ctx)
+		secrets, err := kosmos.SummonSecretManager().ListSecrets()
 		if err != nil {
-			log.Fatalf("failed to setup client: %v", err)
+			log.Fatalf("failed to list secrets: %v", err)
 		}
-		defer client.Close()
 
-		// 3. Iterate over the secrets
-		it := client.ListSecrets(ctx, req)
-		for {
-			secret, err := it.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				log.Fatalf("failed to list secrets: %v", err)
-			}
-
-			secretParts := strings.Split(secret.Name, "/")
-			secretName := secretParts[3]
-
-			fmt.Printf("- %s\n", secretName)
+		for _, secret := range secrets {
+			fmt.Printf("- %s\n", secret.Name)
 		}
 	},
 }

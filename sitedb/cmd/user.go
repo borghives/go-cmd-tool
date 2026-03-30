@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -9,7 +8,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/borghives/go-cmd-tool/shared"
+	"github.com/borghives/kosmos-go"
+	"github.com/borghives/kosmos-go/observation"
 	"github.com/spf13/cobra"
 )
 
@@ -37,15 +37,23 @@ var setUserCmd = &cobra.Command{
 		fmt.Printf("Action: Set MongoDB user '%s'...\n", name)
 		fmt.Printf("Read permission: %v\n", readDb)
 		fmt.Printf("ReadWrite permission: %v\n", readWriteDb)
-		client := shared.MustConnectAdminDbClient(&config, false)
-		defer client.Disconnect(context.Background())
+		observer := kosmos.SummonObserverFor(observation.PurposeAffinityAdmin)
+		defer observer.Close()
 
-		newPassword, err := shared.ParseSecretSourceString(password)
-		if newPassword == "" {
-			log.Fatalf("Failed to extract password source: %v", err)
+		var err error
+		if kosmos.IsSecretSource(password) {
+			password, err = kosmos.CollapseSecret(password)
+			if err != nil {
+				log.Fatalf("Failed to extract password: %v", err)
+			}
 		}
 
-		err = shared.UpsertDbUser(client, name, newPassword, readDb, readWriteDb, nil, false)
+		responsibility := observation.MemberResponsibility{
+			ReadDbs:      readDb,
+			ReadWriteDbs: readWriteDb,
+		}
+
+		err = observer.UpdateMember(name, password, responsibility, true)
 		if err != nil {
 			log.Fatalf("Failed to set user: %v", err)
 		}
@@ -64,10 +72,10 @@ var removeUserCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Action: Remove MongoDB user '%s'...\n", name)
-		client := shared.MustConnectAdminDbClient(&config, false)
-		defer client.Disconnect(context.Background())
+		observer := kosmos.SummonObserverFor(observation.PurposeAffinityAdmin)
+		defer observer.Close()
 
-		err := shared.DeleteDbUser(client, name)
+		err := observer.RemoveMember(name)
 		if err != nil {
 			log.Fatalf("Failed to remove user: %v", err)
 		}
@@ -80,10 +88,10 @@ var listUserCmd = &cobra.Command{
 	Short: "List MongoDB users",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing MongoDB users...\n")
-		client := shared.MustConnectAdminDbClient(&config, false)
-		defer client.Disconnect(context.Background())
+		observer := kosmos.SummonObserverFor(observation.PurposeAffinityAdmin)
+		defer observer.Close()
 
-		users, err := shared.QueryDbUser(client)
+		users, err := observer.ListMembers()
 		if err != nil {
 			log.Fatalf("Failed to list users: %v", err)
 		}
@@ -92,7 +100,7 @@ var listUserCmd = &cobra.Command{
 	},
 }
 
-func printUserInfo(res *shared.UsersInfoResponse, filterAdmin bool) {
+func printUserInfo(res *observation.MembersInfoResponse, filterAdmin bool) {
 	if res == nil {
 		log.Fatalf("Empty User Info")
 	}

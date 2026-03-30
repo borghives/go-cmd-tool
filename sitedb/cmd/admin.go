@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"log"
 
-	"github.com/borghives/go-cmd-tool/shared"
+	"github.com/borghives/kosmos-go"
+	"github.com/borghives/kosmos-go/observation"
+
 	"github.com/spf13/cobra"
 )
 
@@ -29,15 +30,24 @@ var setAdminCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Action: Creating MongoDB admin user '%s'...\n", name)
-		client := shared.MustConnectAdminDbClient(&config, false)
-		defer client.Disconnect(context.Background())
 
-		newPassword, err := shared.ParseSecretSourceString(password)
-		if newPassword == "" {
-			log.Fatalf("Failed to extract password: %v", err)
+		observer := kosmos.SummonObserverFor(observation.PurposeAffinityAdmin)
+		defer observer.Close()
+
+		var err error
+		if kosmos.IsSecretSource(password) {
+			password, err = kosmos.CollapseSecret(password)
+			if err != nil {
+				log.Fatalf("Failed to extract password: %v", err)
+			}
 		}
 
-		err = shared.UpsertDbUser(client, name, newPassword, nil, nil, creator, true)
+		responsibility := observation.MemberResponsibility{
+			CreatorDbs: creator,
+			IsAdmin:    true,
+		}
+
+		err = observer.UpdateMember(name, password, responsibility, true)
 		if err != nil {
 			log.Fatalf("Failed to set admin: %v", err)
 		}
@@ -50,10 +60,10 @@ var listAdminCmd = &cobra.Command{
 	Short: "List MongoDB admin",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Action: Listing MongoDB admin...\n")
-		client := shared.MustConnectDbClient(&config)
-		defer client.Disconnect(context.Background())
+		observer := kosmos.SummonObserverFor(observation.PurposeAffinityAdmin)
+		defer observer.Close()
 
-		users, err := shared.QueryDbUser(client)
+		users, err := observer.ListMembers()
 		if err != nil {
 			log.Fatalf("Failed to list users: %v", err)
 		}

@@ -7,7 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/borghives/go-cmd-tool/shared"
+	"github.com/borghives/kosmos-go"
+	"github.com/borghives/kosmos-go/observation"
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -89,16 +90,16 @@ var dbDeclareCmd = &cobra.Command{
 		}
 
 		// 2. Connect to MongoDB
-		client := shared.MustConnectAdminDbClient(&config, true)
-		defer client.Disconnect(context.Background())
+		observer := kosmos.SummonObserverFor(observation.PurposeAffinityAdmin)
+		defer observer.Close()
 
 		// 3. Process the configuration
-		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 
 		for _, dbConfig := range dataConfig.Databases {
 			fmt.Printf("Processing database: %s\n", dbConfig.Name)
-			db := client.Database(dbConfig.Name)
+			db := observer.Database(dbConfig.Name)
 
 			for _, collConfig := range dbConfig.Collections {
 				fmt.Printf("  Processing collection: %s\n", collConfig.Name)
@@ -143,11 +144,19 @@ var dbDeclareCmd = &cobra.Command{
 
 		for _, userConfig := range dataConfig.Users {
 			fmt.Printf("Processing user: %s\n", userConfig.Name)
-			password, err := shared.ParseSecretSourceString(userConfig.SecretSrc)
+			password, err := kosmos.CollapseSecret(userConfig.SecretSrc)
 			if err != nil {
 				log.Fatalf("Failed to extract password source : %v", err)
 			}
-			err = shared.UpsertDbUser(client, userConfig.Name, password, userConfig.Read, userConfig.ReadWrite, userConfig.Creator, userConfig.Admin)
+
+			responsibility := observation.MemberResponsibility{
+				ReadDbs:      userConfig.Read,
+				ReadWriteDbs: userConfig.ReadWrite,
+				CreatorDbs:   userConfig.Creator,
+				IsAdmin:      userConfig.Admin,
+			}
+
+			err = observer.UpdateMember(userConfig.Name, password, responsibility, true)
 			if err != nil {
 				log.Fatalf("Failed to set user: %v", err)
 			}

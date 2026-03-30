@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"log"
 
-	"github.com/borghives/go-cmd-tool/shared"
+	"github.com/borghives/kosmos-go"
 	"github.com/spf13/cobra"
 )
 
@@ -22,22 +21,14 @@ var rotateCmd = &cobra.Command{
 
 		fmt.Printf("Secret name: %s\n", secretName)
 
-		payload := shared.GeneratePayload(cmd)
-
-		// 1. Build the request to list secrets
-		ctx := context.Background()
-		client := shared.MustGetSecretClient(ctx)
-		defer client.Close()
+		manager := kosmos.SummonSecretManager()
 
 		ttl, _ := cmd.Flags().GetInt("ttl")
-
-		projectParent := shared.GetProjectParents()
-
-		if shared.IsSecretStale(ctx, client, projectParent, secretName, ttl) {
+		if manager.IsSecretStale(secretName, ttl) {
 			fmt.Println("Generating random payload for secret.")
-			payload = shared.GenerateRandomString(32)
-			shared.CreateSecret(ctx, client, projectParent, secretName)
-			shared.AddSecretVersion(ctx, client, projectParent, secretName, payload)
+			payload := GenerateRandomString(32)
+			manager.CreateSecret(secretName)
+			manager.AddSecretVersion(secretName, payload)
 		} else {
 			fmt.Println("Secret is fresh. No rotation needed.")
 		}

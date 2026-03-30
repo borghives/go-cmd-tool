@@ -1,10 +1,9 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/borghives/go-cmd-tool/shared"
+	"github.com/borghives/kosmos-go/ether"
 	"github.com/spf13/cobra"
 )
 
@@ -20,8 +19,6 @@ func Execute() {
 	}
 }
 
-var config shared.SiteConfig
-
 func init() {
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(newCmd)
@@ -31,13 +28,6 @@ func init() {
 	rootCmd.PersistentFlags().StringP("project", "p", "", "Project ID")
 
 	cobra.OnInitialize(func() {
-		var err error
-		config, err = shared.LoadSiteConfig()
-		config.MergeFromFile("tool.env")
-		config.MergeFromCmd(rootCmd)
-		if err != nil {
-			fmt.Printf("Failed to load site config: %v\n", err)
-			os.Exit(1)
-		}
+		ether.CollapseConstants().MergeFromFile("tool.env").MergeFromCmd(rootCmd)
 	})
 }

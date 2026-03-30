@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/borghives/go-cmd-tool/shared"
+	"github.com/borghives/kosmos-go"
 	"github.com/spf13/cobra"
 )
 
@@ -18,21 +18,10 @@ var extractCmd = &cobra.Command{
 			log.Fatalf("Secret source is required")
 		}
 
-		secret, err := shared.ParseSecretSourceString(source)
-		if err == nil {
-			fmt.Print(secret)
-			return
-		}
-
-		if secret == "" && err != nil {
-			log.Fatalf("Failed to parse secret source string: %v", err)
-		}
-
-		secret, err = shared.ParseSecretVersionName(source)
+		secret, err := kosmos.CollapseSecret(source)
 		if err != nil {
-			log.Fatalf("Failed to parse secret version name: %v", err)
+			log.Fatalf("failed to collapse secret: %v", err)
 		}
-
 		fmt.Print(secret)
 
 	},

@@ -1,14 +1,11 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/borghives/go-cmd-tool/shared"
+	"github.com/borghives/kosmos-go/ether"
 	"github.com/spf13/cobra"
 )
-
-var config shared.SiteConfig
 
 var rootCmd = &cobra.Command{
 	Use:   "sitedb",
@@ -24,20 +21,14 @@ func Execute() {
 
 func init() {
 	// Set Client Flags
-	shared.SetDbClientFlags(rootCmd)
+	rootCmd.PersistentFlags().StringP("uri", "u", "", "MongoDB connection URI")
 	rootCmd.AddCommand(adminCmd)
 	rootCmd.AddCommand(dbCmd)
 	rootCmd.AddCommand(userCmd)
 	rootCmd.AddCommand(rsCmd)
 
 	cobra.OnInitialize(func() {
-		var err error
-		config, err = shared.LoadSiteConfig()
-		config.MergeFromFile("tool.env")
-		config.MergeFromCmd(rootCmd)
-		if err != nil {
-			fmt.Printf("Failed to load site config: %v\n", err)
-			os.Exit(1)
-		}
+		ether.CollapseConstants().MergeFromFile("tool.env").MergeFromCmd(rootCmd)
+		ether.ColapseObserverConstants().MergeFromFile("tool.env").MergeFromCmd(rootCmd)
 	})
 }
